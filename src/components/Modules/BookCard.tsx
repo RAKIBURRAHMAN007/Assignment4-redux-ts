@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import type { IBook } from "@/interfaces/IBook";
+import Swal from "sweetalert2";
 
 import { FaInfoCircle, FaEdit, FaTrash, FaBookOpen } from "react-icons/fa";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 import {
   Dialog,
@@ -30,20 +31,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 import { useForm } from "react-hook-form";
-import { useEditBookMutation } from "@/redux/api/baseApi";
+import {
+  useCreateBorrowBookMutation,
+  useDeleteBookMutation,
+  useEditBookMutation,
+} from "@/redux/api/baseApi";
 
 import { toast } from "react-toastify";
 
 interface BookCardProps {
   book: IBook;
-  onDelete?: (id: string) => void;
-  onBorrow?: (book: IBook) => void;
-  onUpdated?: (updatedBook: IBook) => void; // optional callback after update
 }
 
-const BookCard = ({ book, onDelete, onBorrow, onUpdated }: BookCardProps) => {
+const BookCard = ({ book }: BookCardProps) => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editBook, { isLoading }] = useEditBookMutation();
+  const [DeleteBook] = useDeleteBookMutation();
+  const [borrowOpen, setBorrowOpen] = useState(false);
+  const [borrowBook] = useCreateBorrowBookMutation();
+  const borrowForm = useForm({
+    defaultValues: {
+      quantity: 1,
+      dueDate: "",
+    },
+  });
 
   const form = useForm<IBook>({
     defaultValues: book,
@@ -57,17 +69,36 @@ const BookCard = ({ book, onDelete, onBorrow, onUpdated }: BookCardProps) => {
 
   const onSubmit = async (data: IBook) => {
     try {
-      const updated = await editBook({ id: book._id, bookData: data }).unwrap();
+      await editBook({ id: book._id, bookData: data }).unwrap();
 
       toast.success("Book updated successfully!");
       setOpen(false);
-
-      if (onUpdated) onUpdated(updated);
     } catch (error) {
       toast.error(
         "Failed to update book: " +
           (error instanceof Error ? error.message : String(error))
       );
+    }
+  };
+
+  const handleBorrowSubmit = async (data: {
+    quantity: number;
+    dueDate: string;
+  }) => {
+    try {
+      await borrowBook({
+        book: book._id,
+        quantity: data.quantity,
+        dueDate: data.dueDate,
+      }).unwrap();
+      toast.success("Book borrowed successfully!");
+      setBorrowOpen(false);
+      borrowForm.reset();
+      navigate("/borrow-summary");
+    } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.error || "Borrow failed. Please try again.";
+      toast.error(errorMessage);
     }
   };
 
@@ -246,7 +277,22 @@ const BookCard = ({ book, onDelete, onBorrow, onUpdated }: BookCardProps) => {
         </Dialog>
 
         <button
-          onClick={() => onDelete && onDelete(book._id)}
+          onClick={async () => {
+            const result = await Swal.fire({
+              title: "Are you sure?",
+              text: "You won't be able to revert this!",
+              icon: "warning",
+              showCancelButton: true,
+              confirmButtonColor: "#d33",
+              cancelButtonColor: "#3085d6",
+              confirmButtonText: "Yes, delete it!",
+            });
+
+            if (result.isConfirmed) {
+              DeleteBook(book._id);
+              Swal.fire("Deleted!", "The book has been deleted.", "success");
+            }
+          }}
           title="Delete"
           className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-full text-sm flex items-center justify-center transition"
           aria-label="Delete Book"
@@ -255,19 +301,84 @@ const BookCard = ({ book, onDelete, onBorrow, onUpdated }: BookCardProps) => {
           <FaTrash size={16} />
         </button>
 
-        <button
-          onClick={() => onBorrow && onBorrow(book)}
-          disabled={!book.available || book.copies === 0 || isLoading}
-          title={book.available && book.copies > 0 ? "Borrow" : "Unavailable"}
-          className={`p-2 rounded-full text-sm flex items-center justify-center transition ${
-            book.available && book.copies > 0
-              ? "bg-green-600 hover:bg-green-700 text-white"
-              : "bg-gray-400 cursor-not-allowed text-gray-700"
-          }`}
-          aria-label="Borrow Book"
-        >
-          <FaBookOpen size={16} />
-        </button>
+        <Dialog open={borrowOpen} onOpenChange={setBorrowOpen}>
+          <DialogTrigger asChild>
+            <button
+              disabled={!book.available || book.copies === 0 || isLoading}
+              title={
+                book.available && book.copies > 0 ? "Borrow" : "Unavailable"
+              }
+              className={`p-2 rounded-full text-sm flex items-center justify-center transition ${
+                book.available && book.copies > 0
+                  ? "bg-green-600 hover:bg-green-700 text-white"
+                  : "bg-gray-400 cursor-not-allowed text-gray-700"
+              }`}
+              aria-label="Borrow Book"
+            >
+              <FaBookOpen size={16} />
+            </button>
+          </DialogTrigger>
+          <DialogContent className="w-[90vw] max-w-md rounded-xl">
+            <DialogTitle className="text-xl font-bold mb-2">
+              Borrow Book
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mb-4">
+              Fill out the form to borrow this book.
+            </DialogDescription>
+
+            <Form {...borrowForm}>
+              <form
+                onSubmit={borrowForm.handleSubmit(handleBorrowSubmit)}
+                className="space-y-4"
+              >
+                <FormField
+                  control={borrowForm.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantity</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={book.copies}
+                          {...field}
+                          placeholder="Enter quantity"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={borrowForm.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Due Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => setBorrowOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "Borrowing..." : "Confirm Borrow"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

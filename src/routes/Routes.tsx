@@ -2,6 +2,7 @@ import App from "@/App";
 import AddBook from "@/components/Modules/AddBook";
 import AllBooks from "@/components/Modules/AllBooks";
 import BookDetails from "@/components/Modules/BookDetails";
+import BorrowSummary from "@/components/Modules/BorrowSummary";
 
 import Home from "@/components/Modules/Home/Home";
 import ErrorPage from "@/components/shared/ErrorPage";
@@ -28,6 +29,10 @@ const router = createBrowserRouter([
       {
         path: "/books/:id",
         Component: BookDetails,
+      },
+      {
+        path: "/borrow-summary",
+        Component: BorrowSummary,
       },
     ],
   },
