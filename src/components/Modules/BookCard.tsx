@@ -95,9 +95,15 @@ const BookCard = ({ book }: BookCardProps) => {
       setBorrowOpen(false);
       borrowForm.reset();
       navigate("/borrow-summary");
-    } catch (err: any) {
-      const errorMessage =
-        err?.data?.message || err?.error || "Borrow failed. Please try again.";
+    } catch (err: unknown) {
+      let errorMessage = "Borrow failed. Please try again.";
+
+      if (typeof err === "object" && err !== null) {
+        const typedErr = err as { data?: { message?: string }; error?: string };
+        errorMessage =
+          typedErr?.data?.message || typedErr?.error || errorMessage;
+      }
+
       toast.error(errorMessage);
     }
   };
