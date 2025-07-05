@@ -1,20 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetBooksQuery } from "@/redux/api/baseApi";
-
 import type { IBook } from "@/interfaces/IBook";
 import BookCard from "./BookCard";
+import { useSearchParams } from "react-router";
 
 const AllBooks = () => {
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPage = parseInt(searchParams.get("page") || "1");
+  const [page, setPage] = useState(initialPage);
   const limit = 6;
 
   const { isError, isLoading, data } = useGetBooksQuery({ page, limit });
-
   const books = data?.data ?? [];
   const totalPages = data?.pagination?.totalPages ?? 1;
 
-  if (isLoading) return <p>Loading books...</p>;
-  if (isError) return <p>Failed to load books.</p>;
+  useEffect(() => {
+    setSearchParams({ page: page.toString() });
+  }, [page, setSearchParams]);
 
   const handlePrev = () => {
     if (page > 1) setPage((prev) => prev - 1);
@@ -23,6 +25,19 @@ const AllBooks = () => {
   const handleNext = () => {
     if (page < totalPages) setPage((prev) => prev + 1);
   };
+
+  if (isLoading)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-gray-500 text-lg">Loading book details...</p>
+      </div>
+    );
+  if (isError)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-gray-500 text-lg">Failed to load books....</p>
+      </div>
+    );
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -36,7 +51,6 @@ const AllBooks = () => {
         ))}
       </div>
 
-      {/* Pagination Controls */}
       <div className="flex justify-center space-x-4 mt-8">
         <button
           onClick={handlePrev}

@@ -1,6 +1,7 @@
 import type { IBook } from "@/interfaces/IBook";
 import { useGetBooksQuery } from "@/redux/api/baseApi";
 import { Link } from "react-router";
+import BookCard from "../BookCard";
 
 const Books = () => {
   const { isError, isLoading, data } = useGetBooksQuery({ page: 1, limit: 6 });
@@ -22,30 +23,7 @@ const Books = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {books.slice(0, 6).map((book: IBook) => (
-          <div
-            key={book._id}
-            className="border rounded-lg p-5 shadow hover:shadow-lg transition"
-          >
-            <h2 className="text-xl font-semibold mb-3">{book.title}</h2>
-            <p className="text-sm text-gray-600 mb-1">
-              <strong>Author:</strong> {book.author}
-            </p>
-            <p className="text-sm text-gray-600 mb-1">
-              <strong>Genre:</strong> {book.genre}
-            </p>
-            <p className="text-sm text-gray-600 mb-1">
-              <strong>ISBN:</strong> {book.isbn}
-            </p>
-            <p className="text-sm text-gray-600 mb-4">{book.description}</p>
-            <p
-              className={`font-semibold ${
-                book.available ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {book.available ? "Available" : "Not Available"}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">Copies: {book.copies}</p>
-          </div>
+          <BookCard key={book._id} book={book}></BookCard>
         ))}
       </div>
 

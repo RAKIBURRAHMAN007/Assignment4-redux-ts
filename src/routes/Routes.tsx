@@ -1,6 +1,7 @@
 import App from "@/App";
 import AddBook from "@/components/Modules/AddBook";
 import AllBooks from "@/components/Modules/AllBooks";
+import BookDetails from "@/components/Modules/BookDetails";
 
 import Home from "@/components/Modules/Home/Home";
 import ErrorPage from "@/components/shared/ErrorPage";
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
       {
         path: "/create-book",
         Component: AddBook,
+      },
+      {
+        path: "/books/:id",
+        Component: BookDetails,
       },
     ],
   },
